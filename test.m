@@ -5,9 +5,22 @@ close all
 %		The business cycle, J.-O. Hairault, F. Portier 	%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%  Choix du Pays  
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%  Choix du Pays %%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Pays = 1 
+cntrymap = containers.Map([1,2],{'France','USA'}); % Map the selected number with country name (To display country name later)
+prompt= 'Type the number of the country you want to simulate and press Enter: \n 1:France[default] \n 2:USA \n'; % Ask the user to choose a country
+
+% Stock the selected country and check that the user has entered a legit value :
+cntryid = input(prompt);
+if isempty(cntryid) % test if empty
+    cntryid = 1;
+elseif (cntryid~=1) || (cntryid~=2) % test if != 1 or 2
+    cntryid = 1;
+end
+country = cntrymap(cntryid); % Stock the country name
+fprintf('The model will be simulated for %s\n ',country);
 
 
 %**********************
@@ -18,7 +31,7 @@ C_us = [ 0.95 ; 0.95 ; 0.009  ; 0.008  ;  1.014 ; 0.377 ; 0.009   ; 0.2  ; 0.3  
 C_fr = [ 0.98 ; 0.99 ;  0.009 ; 0.0058 ; 1.028  ;  0.50 ; 0.0098  ; 0.2  ; 0.335 ; 0.0125 ; - 1/3 ; 1/9 ; 0.225 ; 0.25 ; 1 ; 0.007 ; 0.988]
 
 
-if Pays == 1 
+if cntryid == 1 
 	C = [C_fr];
 else
 	 C = [C_us]; 
@@ -89,8 +102,5 @@ M3=zeros(7,2);
 M4 = zeros(5,5); 
 M5 = zeros(5,7); 
 M6 = zeros(2,1); 
-
-
-zfzfzafza
 
 
