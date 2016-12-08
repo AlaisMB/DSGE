@@ -16,7 +16,8 @@ prompt= 'Type the number of the country you want to simulate and press Enter: \n
 cntryid = input(prompt);
 if isempty(cntryid) % test if empty
     cntryid = 1;
-elseif (cntryid~=1) || (cntryid~=2) % test if != 1 or 2
+elseif cntryid==1 || cntryid==2 % test if != 1 or 2
+else
     cntryid = 1;
 end
 country = cntrymap(cntryid); % Stock the country name
