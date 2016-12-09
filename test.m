@@ -62,7 +62,7 @@ gamma_2 = - (1- g_barre * (1+z - delta)) * (MPY * (1/CY))^(1/sigma) ;
 
 vP = gamma / (1 + gamma) ; 
 v = vP * P ;
-mu = log(vP); % ?????? Equation 30 et 31, d'o? sort mu ?!
+mu = gamma;
 
 MP = MPY * Y ;
 
@@ -121,13 +121,23 @@ M1(2,3) = 1;
 
 M2(2,5) = -1;
 
-% Equation 25
-M1(3,1) = -(Dvar*Cvar*C^((sigma-1)/sigma));
-M1(3,4) = g_barre*z;
-M1(3,7) = (Dvar*((sigma-1)/sigma) + 1 - Cvar);
+%%% Choose between 25 and 40 %%%%
 
-M2(3,2) = (-1/sigma)*Dvar + Cvar;
-M2(3,5) = -Dvar;
+    % Equation 25
+    M1(3,1) = -(Dvar*Cvar*C^((sigma-1)/sigma));
+    M1(3,4) = g_barre*z;
+    M1(3,7) = (Dvar*((sigma-1)/sigma) + 1 - Cvar);
+
+    M2(3,2) = (-1/sigma)*Dvar + Cvar;
+    M2(3,5) = -Dvar;
+
+    % Equation 40
+    %M1(3,7) = 1;
+
+    %M2(3,:) = [0 1 -1 0 0];
+
+    %M3(3,2) = -1;
+
 
 % Equation 30
 M1(4,:) = [0 -1 -1 0 1 0 0];
@@ -187,17 +197,29 @@ M5L(3,7) = -phi*g_barre^2;
 
 % Equation 40
 M4I(4,3) = -1;
-M4L(4,3) = 1;
+M4L(4,2) = 1;
 
 M5I(4,7) = 1;
 M6I(4,2) = -1;
 
-% Equation 40 bis magique
-M4I(5,2) = 1;
-M4L(5,2) = -1;
 
-M5L(5,7) = 1;
-M6L(5,2) = 1;
+%%% Choose between Magic40 and Syrian25 %%%
+
+    % Equation 40 bis magique
+    M4I(5,2) = 1;
+    M4L(5,2) = -1;
+
+    M5L(5,7) = 1;
+    M6I(5,2) = 1;
+
+    % Equation 25 la migrante
+    %M5I(5,1) = -(Dvar*Cvar*C^((sigma-1)/sigma));
+    %M5I(5,4) = g_barre*z;
+    %M5I(5,7) = (Dvar*((sigma-1)/sigma) + 1 - Cvar);
+
+    %M4I(5,2) = (-1/sigma)*Dvar + Cvar;
+    %M4I(5,5) = -Dvar;
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                      	Reduced Form            			  %
