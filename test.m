@@ -25,7 +25,7 @@ fprintf('The model will be simulated for %s\n ',country);
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Calibration and steady state %
+%%Calibration and steady state%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 C_us = num2cell([ 0.95 ; 0.95 ; 0.009  ; 0.008  ;  1.014 ; 0.377 ; 0.009   ; 0.2  ; 0.3   ;  0.025 ; - 1/3 ; 1/9 ; 0.197 ; 0.1  ; 1 ; 0.01  ; 0.988; 0]);
@@ -89,7 +89,7 @@ disp(param2);
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%		   	Linearized Model in Matrix Form 				  %
+%%		   	Linearized Model in Matrix Form 				 %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
@@ -197,7 +197,7 @@ M5L(3,7) = -phi*g_barre^2;
 
 % Equation 40
 M4I(4,3) = -1;
-M4L(4,2) = 1;
+M4L(4,3) = 1;
 
 M5I(4,7) = 1;
 M6I(4,2) = -1;
@@ -207,10 +207,10 @@ M6I(4,2) = -1;
 
     % Equation 40 bis magique
     M4I(5,2) = 1;
-    M4L(5,2) = -1;
+    M4L(5,3) = -1;
 
-    M5L(5,7) = 1;
-    M6I(5,2) = 1;
+    M5L(5,7) = 0;
+    M6L(5,2) = 0;
 
     % Equation 25 la migrante
     %M5I(5,1) = -(Dvar*Cvar*C^((sigma-1)/sigma));
@@ -222,7 +222,7 @@ M6I(4,2) = -1;
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%                      	Reduced Form            			  %
+%%                      	Reduced Form            	      %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 M40 = M4I - M5I*inv(M1)*M2;
 M41 = M4L - M5L*inv(M1)*M2;
@@ -230,12 +230,13 @@ M41 = M4L - M5L*inv(M1)*M2;
 M50 = M6I + M5I*inv(M1)*M3;
 M51 = M6L + M5L*inv(M1)*M3;
 
+% Matrices of equation A45 in KP&R :
 W = -inv(M40)*M41;
 R = inv(M40)*M50;
 Q = inv(M40)*M51;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%                      	Eigenvalues             			  %
+%%                      	Eigenvalues            			  %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 [P,D]=eigs(W); % eigs() function gives eigenvalues in increasing order
 EIG = eigs(W);
@@ -259,7 +260,9 @@ disp('Eigenvalues:')
 disp(EIG);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%                      	Saddle Path                			  %
+%%                     	Saddle Path                			  %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 P1 = inv(P);
+
+Pii_lambda = P1(3,1:4);
