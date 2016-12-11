@@ -236,12 +236,19 @@ R = inv(M40)*M50;
 Q = inv(M40)*M51;
 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%                     	Magic trick                			  %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+RHO = [rho_a 0 ; 0 rho_g ];
+PSI = R*RHO+Q ;
+
+B = [W PSI ; 0 0 0 0 0 rho_a  0; 0 0 0 0 0 0 rho_g];
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%                      	Eigenvalues            			  %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-[P,D]=eigs(W); % eigs() function gives eigenvalues in increasing order
-EIG = eigs(W);
+[P,D]=eig(B); % eigs() function gives eigenvalues in increasing order
+EIG = eig(B);
 
 UR = numel(EIG(abs(EIG)==1));
 back = numel(EIG(abs(EIG)<1));
@@ -261,61 +268,40 @@ pause
 disp('Eigenvalues:')
 disp(EIG);
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%                     	Saddle Path                			  %
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-RHO = [rho_a 0 ; 0 rho_g ];
-PSI = R*RHO+Q ;
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Saddle Path
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 P1 = inv(P);
-PSI1 = P1 * PSI;
-mu_lambda = EIG(5) ; % Lambda eigenvalues
-mu_mt1 = EIG(3);
-mu_mu = EIG(4);
+    
+% LAmbda  
+PL = [P1(5,1:4) P1(5,6:7)];
+SP = -inv(P1(5,5))*PL; % saddle path equation
 
-lambda_tilda = [PSI(5,1)*mu_lambda^(-1)*(1/(1-(rho_a/mu_lambda))) PSI(5,2)*mu_lambda^(-1)*(1/(1-(rho_g/mu_lambda)))];
-mt1_tilda = [PSI(3,1)*mu_mt1^(-1)*(1/(1-(rho_a/mu_mt1))) PSI(3,2)*mu_mt1^(-1)*(1/(1-(rho_g/mu_mt1)))];
-mu_tilda = [PSI(4,1)*mu_mu^(-1)*(1/(1-(rho_a/mu_mu))) PSI(4,2)*mu_mt1^(-1)*(1/(1-(rho_g/mu_mu)))];
+    W1K = [B(1,1:4) B(1,6:7)];
+    W1L = B(1,5);
+    PIB1K = W1K + W1L*SP;
+    
+    W2K = [B(2,1:4) B(2,6:7)];
+    W2L = B(2,5);
+    PIB2K = W2K + W2L*SP;
+    
+    W3K = [B(3,1:4) B(3,6:7)];
+    W3L = B(3,5);
+    PIB3K = W3K + W3L*SP;
+    
+    W4K = [B(4,1:4) B(4,6:7)];
+    W4L = B(4,5);
+    PIB4K = W4K + W4L*SP;
+ 
+PIB4 = [PIB1K ; PIB2K ; PIB3K ; PIB4K; 0 0 0 0 rho_a 0; 0 0 0 0 0 rho_g];
 
-% New PSI
+PIB=PIB4
 
-PSI2 = PSI;
 
-PSI2(3,1) = mt1_tilda(1);
-PSI2(3,2) = mt1_tilda(2);
-
-PSI2(4,1) = mu_tilda(1);
-PSI2(4,2) = mu_tilda(2);
-
-PSI2(5,1) = lambda_tilda(1);
-PSI2(5,2) = lambda_tilda(2);
-
-% New D
-D2 = zeros(5,5);
-D2(1,1) = D(1,1);
-D2(2,2) = D(2,2);
-
-M = P*D2*P1;
-F = P*PSI;
-
-FINAL = [M F; 0 0 0 0 0 rho_a 0 ; 0 0 0 0 0 0 rho_g];
+% PID
+%concatener
+M2 = M2
 
 
 
-% IRFS
-
-periods = 100;
-
-shock = [0 ; 0 ; 0 ; 0 ; 0 ; 1; 0];
-
-for i=1:periods;
-    RC=(FINAL^(i-1))*shock;
-    RK(i)=RC(1);
-    RM(i)=RC(2);
-end;
-
-figure
-subplot(221), plot(RK(1:periods))
-title('Capital')
-
-subplot(222), plot(RM(1:periods))
-title('Money')
