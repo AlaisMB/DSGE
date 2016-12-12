@@ -42,7 +42,6 @@ end
 
 
 rho_a = rho_an; % We suppose this for the moment. We should let the user decide.
-
 A_barre = 0.2;
 P = 0.3; 
 
@@ -187,7 +186,7 @@ M5I(1,4) = -(1-beta*(1-delta));
 M4I(2,1) = Evar * K;
 M4L(2,1) = Evar*K*(delta-1-z);
 
-M5L(2,:) = [-Evar Evar*w*H Evar*w*H Evar*w*K 0 1 0];
+M5L(2,:) = [-Evar Evar*w*H Evar*w*H Evar*z*K 0 1 0];
 
 % Equation 32
 M4L(3,4) = Y/(1+mu);
@@ -196,8 +195,8 @@ M5I(3,7) = phi*beta*g_barre^3;
 M5L(3,7) = -phi*g_barre^2;
 
 % Equation 40
-M4I(4,3) = 1;
-M4L(4,2) = -1;
+M4I(4,2) = 1;
+M4L(4,3) = -1;
 
 M5I(4,7) = 0;
 M6I(4,2) = 0;
@@ -206,11 +205,11 @@ M6I(4,2) = 0;
 %%% Choose between Magic40 and Syrian25 %%%
 
     % Equation 40 bis magique
-    M4I(5,2) = -1;
-    M4L(5,2) = 1;
+    M4I(5,3) = -1;
+    M4L(5,3) = 1;
 
-    M5L(5,7) = 1;
-    M6L(5,2) = -1;
+    M5I(5,7) = 1;
+    M6I(5,2) = -1;
 
     % Equation 25 la migrante
     %M5I(5,1) = -(Dvar*Cvar*C^((sigma-1)/sigma));
@@ -234,7 +233,6 @@ M51 = M6L + M5L*inv(M1)*M3;
 W = -inv(M40)*M41;
 R = inv(M40)*M50;
 Q = inv(M40)*M51;
-
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -264,58 +262,152 @@ disp(EIG);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%                     	Saddle Path                			  %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-RHO = [rho_a 0 ; 0 rho_g ];
-PSI = R*RHO+Q ;
+
 P1 = inv(P);
-PSI1 = P1 * PSI;
-mu_lambda = EIG(5) ; % Lambda eigenvalues
-mu_mt1 = EIG(3);
+
+RHO = [rho_a 0 ; 0 rho_g];
+
+% We decompose P1 into 3 matrices in order to decompose predetermined and jump
+% variables and we'll get P1 = [Pss Psa ; Pas Paa]
+Pss = P1(1:2,1:2);
+Psa = P1(1:2,3:5);
+Pas = P1(3:5,1:2);
+Paa = P1(3:5,3:5);
+
+% We split W into 2 systems of equation, W1 that depends on predetermined
+% and W2 that depends on jump such that W = [W1;W2]
+
+W1 = W(1:2,:);
+W2 = W(3:5,:);
+
+% We split W1 into the matrix that multiply s and the one that multiply a:
+
+W11 = W1(:,1:2);
+W12 = W1(:,3:5);
+
+% Then we have the new system for s_t+1
+
+PIs = W11 - W12*inv(Paa)*Pas;
+
+% SADDLE PATH
+mu_m = EIG(3);
 mu_mu = EIG(4);
+mu_l = EIG(5);
+% CL
 
-lambda_tilda = [PSI(5,1)*mu_lambda^(-1)*(1/(1-(rho_a/mu_lambda))) PSI(5,2)*mu_lambda^(-1)*(1/(1-(rho_g/mu_lambda)))];
-mt1_tilda = [PSI(3,1)*mu_mt1^(-1)*(1/(1-(rho_a/mu_mt1))) PSI(3,2)*mu_mt1^(-1)*(1/(1-(rho_g/mu_mt1)))];
-mu_tilda = [PSI(4,1)*mu_mu^(-1)*(1/(1-(rho_a/mu_mu))) PSI(4,2)*mu_mt1^(-1)*(1/(1-(rho_g/mu_mu)))];
+C = P1*R*RHO+P1*Q;
+C = C(3:5,:);
 
-% New PSI
+CL = [ -C(2,1)*1/(mu_m * rho_a)  -C(1,2)*1/(mu_m * rho_g);
+       -C(2,1)*1/(mu_mu * rho_a) -C(2,2)*1/(mu_mu * rho_g);
+       -C(3,1)*1/(mu_l * rho_a)  -C(3,2)*1/(mu_l * rho_g)];
 
-PSI2 = PSI;
+% Computation of PIa
 
-PSI2(3,1) = mt1_tilda(1);
-PSI2(3,2) = mt1_tilda(2);
+PIa = W12*inv(Paa)*CL+R(1:2,:)*RHO+Q(1:2,:);
 
-PSI2(4,1) = mu_tilda(1);
-PSI2(4,2) = mu_tilda(2);
-
-PSI2(5,1) = lambda_tilda(1);
-PSI2(5,2) = lambda_tilda(2);
-
-% New D
-D2 = zeros(5,5);
-D2(1,1) = D(1,1);
-D2(2,2) = D(2,2);
-
-M = P*D2*P1;
-F = P*PSI;
-
-FINAL = [M F; 0 0 0 0 0 rho_a 0 ; 0 0 0 0 0 0 rho_g];
+M = real([PIs PIa ; zeros(2) RHO]);
 
 
+%% PI matrix:
 
-% IRFS
+V = -inv(Paa)*Pas;
+U = inv(Paa)*CL;
 
-periods = 100;
+mu = [V(2,1:2) U(2,1:2)];
+lambda = [V(3,1:2) U(3,1:2)];
 
-shock = [0 ; 0 ; 0 ; 0 ; 0 ; 1; 0];
+% last 2 lines of PI
+PID = zeros(9,4);
+PID(8,:) = mu;
+PID(9,:) = lambda;
+
+X = inv(M1)*M2;
+Y = inv(M1)*M3;
+Z = X(:,3:5)*inv(Paa);
+
+G1 = X(:,1)-Z(:,1);
+G2 = X(:,2)-Z(:,2);
+G3 = X(:,3:5)*inv(Paa)*CL+Y;
+
+PID(1:7,:) = [G1 G2 G3];
+PID = real(PID);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% IRF
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%M = [0.87 0.12 0.14 0.16; 0.36 0.05 0.47 -0.35; 0 0 rho_a 0; 0 0 0 rho_g];
+%PID = [0.33 0.05 0.5 0.04; -1.03 1.21 0.47 1.55;0.44 0.06 0.67 0.08;-1.59 1.27 1.14 1.63;-0.42 0.85 1.331 0.09;0.45 -1.3 2.29 -1.69;1.05 -2.57 1.14 -3.32;-0.44 -0.06 -0.67 -0.08;-0.36 0.95 -0.47 1.35];
+       
+periods = 20;
+
+shock = [0 ; 0 ; 0 ; 1];
 
 for i=1:periods;
-    RC=(FINAL^(i-1))*shock;
-    RK(i)=RC(1);
-    RM(i)=RC(2);
+    RC=(M^(i-1))*shock;
+    RCK(i)=RC(1);
+    RCM(i)=RC(2);
+    RCA(i)=RC(3);
+    RCG(i)=RC(4);
+end;
+
+for i=1:periods;
+RC=(PID*M^(i-1))*shock;
+ RCC(i)=RC(1);
+ RCH(i)=RC(2);
+ RCW(i)=RC(3);
+ RCZ(i)=RC(4);
+ RCY(i)=RC(5);
+ RCP(i)=RC(6);
+ RCF(i)=RC(7);
 end;
 
 figure
-subplot(221), plot(RK(1:periods))
+subplot(221),plot(RCK(1:periods))
 title('Capital')
+xlabel('quarters')
+ylabel('% Dev.   ')
 
-subplot(222), plot(RM(1:periods))
-title('Money')
+subplot(223),plot(RCM(1:periods))
+title('Monnaie')
+xlabel('quarters')
+ylabel('% Dev.   ');
+
+figure
+subplot(221),plot(RCC(1:periods))
+title('Consumption')
+xlabel('quarters')
+ylabel('% Dev.   ')
+
+subplot(222),plot(RCH(1:periods))
+title('Hours')
+xlabel('quarters')
+ylabel('% Dev.   ')
+
+subplot(223),plot(RCW(1:periods))
+title('Wages')
+xlabel('quarters')
+ylabel('% Dev.   ');
+
+
+figure
+subplot(221),plot(RCZ(1:periods))
+title('Interest rate')
+xlabel('quarters')
+ylabel('% Dev.   ')
+
+subplot(222),plot(RCY(1:periods))
+title('Output')
+xlabel('quarters')
+ylabel('% Dev.   ')
+
+subplot(223),plot(RCP(1:periods))
+title('Profits')
+xlabel('quarters')
+ylabel('% Dev.   ')
+
+subplot(224),plot(RCF(1:periods))
+title('Inflation')
+xlabel('quarters')
+ylabel('% Dev.   ')
+
