@@ -374,13 +374,13 @@ PID = zeros(9,4);
 PID(8,:) = mu;
 PID(9,:) = lambda;
 
-X = inv(M1)*M2;
-Y = inv(M1)*M3;
-Z = X(:,3:5)*inv(Paa)*Pas;
+XX = inv(M1)*M2;
+YY = inv(M1)*M3;
+ZZ = XX(:,3:5)*inv(Paa)*Pas;
 
-G1 = X(:,1)-Z(:,1);
-G2 = X(:,2)-Z(:,2);
-G3 = X(:,3:5)*inv(Paa)*CL+Y;
+G1 = XX(:,1)-ZZ(:,1);
+G2 = XX(:,2)-ZZ(:,2);
+G3 = XX(:,3:5)*inv(Paa)*CL+YY;
 
 PID(1:7,:) = [G1 G2 G3];
 
@@ -413,9 +413,11 @@ series = {'C' 'H' 'w' 'z' 'Y' 'pi' 'f' 'mu'};
 for i = 1:length(series)
     irf.( series{i} ) = Rd( i , 1:nrep )';
 end
-
+irf.k  = Rstate(1,1:nrep)';
+irf.m  = Rstate(2,1:nrep)';
+irf.g  = Rstate(4,1:nrep)';
 irf.z  = Rd(4,2:(nrep+1))';
-irf.I  = (irf.Y - CY*irf.C)/CY;
+irf.I  = (irf.Y-CY*irf.C)/CY ;
 
 % --------------------------------------------
 % Plot figures
