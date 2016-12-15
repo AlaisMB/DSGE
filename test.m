@@ -68,6 +68,7 @@ end
 
 
 rho_a = rho_ap; % We suppose this for the moment. We should let the user decide.
+epsilon_a = epsilon_ap;
 A_barre = 1; 
 
 z = (1/beta) - 1 + delta; 
@@ -94,10 +95,6 @@ Cvar = (1 + sigma * ( a - 1))/ (sigma * (C^((sigma-1)/sigma) + gamma_2*(MP^((sig
 Dvar = (g_barre / beta ) - 1;
 Evar = (K*(delta - z) - w * H + C)^(-1);
 
-epsilon=1-(g_barre/beta);
-B1=((a*sigma-sigma+1)/sigma)*(1/(1-(epsilon*MPY*CY)));
-B2=((a*sigma-sigma+1)/sigma)*(1/(1-(CY/(epsilon*MPY))));
-
 
 %%%%%%%%%%%% Display parameters value %%%%%%%%%%%%
 
@@ -116,6 +113,7 @@ disp(param2);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%		   	Linearized Model in Matrix Form 				 %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 M1=zeros(7,7); 
 M2=zeros(7,5);
 M3=zeros(7,2);
@@ -130,38 +128,38 @@ M6L = zeros(5,2);
 
 
 %%%%%%%%%%%% STATIC EQUATIONS %%%%%%%%%%%%
-% Equation 23 -> OK
+% Equation 23
 M1(1,1) = (Avar/(1-Bvar)) - 1/sigma;
 M1(1,7) = (Avar*Bvar)/(1-Bvar);
 
 M2(1,2) = (Avar*Bvar)/(1-Bvar);
 M2(1,5) = 1;
 
-% Equation 24 -> OK
+% Equation 24 
 M1(2,2) = (zeta * H)/(1-H);
 M1(2,3) = 1;
 
 M2(2,5) = -1;
 
-%Equation 40 -> OK
+%Equation 40
 M1(3,7) = 1;
 
 M2(3,:) = [0 1 -1 0 0];
 
 M3(3,2) = 1;
 
-% Equation 30 -> OK
+% Equation 30
 M1(4,:) = [0 1 1 0 -1 0 0];
 
 M2(4,4) = -mu/(1+ mu);
 
-% Equation 31 -> OK
+% Equation 31
 M1(5,:) = [0 0 0 1 -1 0 0];
 
 M2(5,1) = -1;
 M2(5,4) = - mu/(1+mu);
 
-% Equation 34 -> OK
+% Equation 34
 M1(6,2) = alpha - 1;
 M1(6,5) = 1;
 
@@ -169,7 +167,7 @@ M2(6,1) = alpha;
 
 M3(6,1) = 1;
 
-% % Equation 35 !!! 404 not Found !!! (equation (6) ?)
+% % Equation 35
 M1(7,2) = H*w;
 M1(7,3) = H*w;
 M1(7,4) = z*K;
@@ -188,6 +186,7 @@ M4L(1,5) = -1;
 M5I(1,4) = -1 - beta * ( delta - 1);
 
 % Equation 27   -> Fausse
+
 % M4I(2,1) = Evar * K;
 % M4L(2,1) = Evar*K*(delta-1-z);
 % 
@@ -201,7 +200,7 @@ M5L(2,3)= (1-alpha)/(1+gamma);
 M5L(2,4)= alpha/(1+gamma);
 M5L(2,6)= gamma/(1+gamma);
 
-% Equation 32   -> OK
+% Equation 32
 M4L(3,4) = Y/(1+mu);
 
 M5I(3,7) = phi*beta*g_barre^3;
@@ -216,7 +215,7 @@ M4I(5,2) = Dvar* ( (-1/sigma) + gamma_2 * Cvar*(MP)^((sigma-1)/sigma) );
 M4I(5,5) = -Dvar;
 
 
-% Equation 40 bis magique -> OK
+% Equation 40 bis magique
 M4I(4,2) = 1;
 M4L(4,3) = -1;
 
@@ -273,13 +272,13 @@ RHO = [rho_a 0 ; 0 rho_g];
 
 % We decompose P1 into 3 matrices in order to decompose predetermined and jump
 % variables and we'll get
-%             ?             ?
+%             |             |
 %             |  Pss   Psa  |
 %             | (1x2) (1x2) |
 %   inv(P)=   |             | 
 %             |  Pas   Paa  |
 %             | (1x2) (1x2) |
-%             ?             ?
+%             |             |
 Pss = P1(1:2,1:2);
 Psa = P1(1:2,3:5);
 Pas = P1(3:5,1:2);
@@ -353,7 +352,7 @@ PID(1:7,:) = [G1 G2 G3];
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% IRF
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%      
-nrep = 10;
+nrep = 12;
 
 %Monetary shock
 shock=[0;0;0;1];
@@ -363,19 +362,20 @@ for i = 1:nrep+1
     Rstate(:,i) = (M^(i-1))*shock;
 end
 
-k = Rstate(1,1:nrep)';
-C = Rd(1,1:nrep)';
-H = Rd(2,1:nrep)';
-w = Rd(3,1:nrep)';
-z = Rd(4,2:(nrep+1))';
-Y = Rd(5,1:nrep)';
+
+k  = Rstate(1,1:nrep)';
+C  = Rd(1,1:nrep)';
+H  = Rd(2,1:nrep)';
+w  = Rd(3,1:nrep)';
+z  = Rd(4,2:(nrep+1))';
+Y  = Rd(5,1:nrep)';
 pi = Rd(6,1:nrep)';
-f = Rd(7,1:nrep)';
+f  = Rd(7,1:nrep)';
 mu = Rd(8,1:nrep)';
-I = (Y-CY*C)/(1-CY);
+I  = (Y - CY*C)/CY;
 
 figure
-plot(1:nrep,[w,C,z],'-s');
+plot(1:nrep,[w,C,z],'-o');
 legend('w','C','r','Location','southoutside');
 xlabel('Quarters');
 ylabel('relative deviation (%)');
@@ -384,8 +384,15 @@ hline = refline([0 0]);
 set(hline,'LineStyle','--','color','black');
 
 figure
-plot(1:nrep,[pi,mu],'-s');
+plot(1:nrep,[pi,mu],'-o');
 legend('pi','mu','Location','southoutside');
+xlabel('Quarters');
+ylabel('relative deviation (%)');
+set(gcf, 'Color', [1,1,1]);
+
+figure
+plot(1:nrep,[H,Y,I],'-o');
+legend('H','Y','I','Location','southoutside');
 xlabel('Quarters');
 ylabel('relative deviation (%)');
 set(gcf, 'Color', [1,1,1]);
@@ -396,16 +403,19 @@ set(gcf, 'Color', [1,1,1]);
 
 nsimul = 100;
 
-nlong=100;
+nlong=150;
 
 % Drawing innovations
-aleaa = normrnd(0,epsilon_ap,nlong,nsimul);
+aleaa = normrnd(0,epsilon_a,nlong,nsimul);
 aleag = normrnd(0,epsilon_g,nlong,nsimul);
 
-% Drawing autoregressive shocks
-for i=2:nlong
-    epsa(i,:) = rho_a*aleaa(i-1,:) + aleaa(i);
-    epsg(i,:) = rho_g*aleag(i-1,:) + aleag(i);
+% Drawing autoregressive processes
+epsa(1,:) = aleaa(1,:);
+epsg(1,:) = aleag(1,:);
+
+for t=2:nlong
+    epsa(t,:) = rho_a*epsa(t-1,:) + aleaa(t);
+    epsg(t,:) = rho_g*epsg(t-1,:) + aleag(t);
 end
 
 % We can now simulate the model
@@ -426,51 +436,83 @@ for j=1:nsimul
         YC(i,j) = PID(5,1:2)*S(:,i)+PID(5,3)*epsa(i,j)+PID(5,4)*epsg(i,j);
         PC(i,j) = PID(6,1:2)*S(:,i)+PID(6,3)*epsa(i,j)+PID(6,4)*epsg(i,j);
         FC(i,j) = PID(7,1:2)*S(:,i)+PID(7,3)*epsa(i,j)+PID(7,4)*epsg(i,j);
+        IC(i,j) = (YC(i,j)-CY*CC(i,j))/CY;
     end
 end
 close(h)
 
 
-% Plot the first simulation
+%%%%%% Moments computation %%%%%%%
+% HP filter
+[~,CCe] = hpfilter(CC,1600);
+[~,HCe] = hpfilter(HC,1600);
+[~,WCe] = hpfilter(WC,1600);
+[~,RCe] = hpfilter(RC,1600);
+[~,YCe] = hpfilter(YC,1600);
+[~,PCe] = hpfilter(PC,1600);
+[~,FCe] = hpfilter(FC,1600);
+[~,ICe] = hpfilter(IC,1600);
+
+% Standard deviation
+CCsd = mean(std(CCe));
+HCsd = mean(std(HCe));
+WCsd = mean(std(WCe));
+RCsd = mean(std(RCe));
+YCsd = mean(std(YCe));
+PCsd = mean(std(PCe));
+FCsd = mean(std(FCe));
+ICsd = mean(std(ICe));
+
+
+%% Plot 1 of the simulations
 
 figure
-subplot(221),plot(CC(:,1));
-title('Consumption')
+subplot(221),plot(1:nlong,[CC(:,1),YC(:,1)]);
+legend('Consumption','Output','Location','southoutside');
+title('Revenu and consumption')
 xlabel('Quarters')
 ylabel('% Dev.')
+set(gcf, 'Color', [1,1,1]);
 
 subplot(222),plot(YC(:,1));
 title('Output')
 xlabel('Quarters')
 ylabel('% Dev.')
+set(gcf, 'Color', [1,1,1]);
 
 subplot(223),plot(WC(:,1));
 title('Wages')
 xlabel('Quarters')
 ylabel('% Dev.')
+set(gcf, 'Color', [1,1,1]);
 
 subplot(224),plot(HC(:,1));
 title('Hours')
 xlabel('Quarters')
 ylabel('% Dev.')
+set(gcf, 'Color', [1,1,1]);
 
 figure
 subplot(221),plot(aleaa(:,1));
-title('White noise shocks, Technology')
+title('White noise, Technology')
 xlabel('Quarters')
 ylabel('% Dev.')
+set(gcf, 'Color', [1,1,1]);
 
 subplot(222),plot(aleag(:,1));
-title('White noise shocks, Money growth')
+title('White noise, Money growth')
 xlabel('Quarters')
 ylabel('% Dev.')
+set(gcf, 'Color', [1,1,1]);
 
 subplot(223),plot(epsa(:,1));
 title('Total factor productivity')
 xlabel('Quarters')
 ylabel('% Dev.')
+set(gcf, 'Color', [1,1,1]);
 
 subplot(224),plot(epsg(:,1));
 title('Money growth rate')
 xlabel('Quarters')
 ylabel('% Dev.')
+set(gcf, 'Color', [1,1,1]);
