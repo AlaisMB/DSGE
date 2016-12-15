@@ -185,20 +185,12 @@ M4L(1,5) = -1;
 
 M5I(1,4) = -1 - beta * ( delta - 1);
 
-% Equation 27   -> Fausse
+% Equation 27
 
-% M4I(2,1) = Evar * K;
-% M4L(2,1) = Evar*K*(delta-1-z);
-% 
-% M5L(2,:) = [-Evar Evar*w*H Evar*w*H Evar*z*K 0 1 0];
+M4I(2,1) = Evar * K;
+M4L(2,1) = Evar*K*(delta-1-z);
 
-M4I(2,1)=KY;
-M4L(2,1)=-(1/beta)*KY;
-M5L(2,1)=-CY;
-M5L(2,2)= (1-alpha)/(1+gamma);
-M5L(2,3)= (1-alpha)/(1+gamma);
-M5L(2,4)= alpha/(1+gamma);
-M5L(2,6)= gamma/(1+gamma);
+M5L(2,:) = [-Evar*C Evar*w*H Evar*w*H Evar*z*K 0 1 0];
 
 % Equation 32
 M4L(3,4) = Y/(1+mu);
@@ -229,7 +221,11 @@ M41 = M4L - M5L*inv(M1)*M2;
 M50 = M6I + M5I*inv(M1)*M3;
 M51 = M6L + M5L*inv(M1)*M3;
 
-% Matrices of equation A45 in KP&R :
+% Reduces form model:
+% S(t+1) = ( W * S(t) ) + ( R * E(t+1) ) + ( Q * E(t) )
+% with S the vector of state variables and E the matrix of exogenous
+% variables.
+
 W = -inv(M40)*M41;
 R = inv(M40)*M50;
 Q = inv(M40)*M51;
@@ -244,7 +240,7 @@ UR = numel(EIG(abs(EIG)==1));
 back = numel(EIG(abs(EIG)<1));
 
 if UR ~= 0,
-    disp('Unit Root !')
+    disp('Unit Root(s) !')
 else
     disp('No unit root :) ')
 end
@@ -266,9 +262,30 @@ end
 %%                     	Saddle Path                			  %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+% The purpose of this section is to substitute the equations for which
+% |eigenvalue| > 1.
+% In order to achieve this we must solve forward the equations of m(t+1),
+% mu(t), and lambda(t).
+% The following code follows the method discussed by King, Plosser & Rebelo and
+% Cochrane and is based on the seminal work of Blanchard and Kahn.
+%
+% We try to keep the same notation as in the original article to keep the
+% reading understandable.
+
+% We are looking for a solution of the form S(t+1) = M*S(t) <=>
+%
+% | k(t+1) |   |    ?_s        ?_e      |   | k(t) |
+% | m(t+1) |   |   (2x2)      (2x2)     |   | m(t) |
+% |        | = |                        | * |      |
+% | A(t+1) |   |  0     0   ?(A)    0   |   | A(t) |
+% | g(t+1) |   |  0     0   0     ?(g)  |   | g(t) |
+
 P1 = inv(P);
 
 RHO = [rho_a 0 ; 0 rho_g];
+
+% -------------------------------------------
+% PIs computation
 
 % We decompose P1 into 3 matrices in order to decompose predetermined and jump
 % variables and we'll get
@@ -284,47 +301,65 @@ Psa = P1(1:2,3:5);
 Pas = P1(3:5,1:2);
 Paa = P1(3:5,3:5);
 
-% We split W into 2 systems of equation, W1 that depends on predetermined
-% and W2 that depends on jump such that
-%             ?             ?
-%             |  Pss   Psa  |
-%             | (1x2) (1x2) |
-%   W=        |             | 
-%             |  Pas   Paa  |
-%             | (1x2) (1x2) |
-%             ?             ?
+% We split W into 2 systems of equation. W1 is the equations describing the
+% dynamics of [k(t+1) , m(t+1)] and W2 that describes the dynamics of the costate variables.
+%         |   W1  |
+%         | (2x5) |
+%    W  = |       |
+%         |   W2  |
+%         | (3,5) |
 W1 = W(1:2,:);
 W2 = W(3:5,:);
 
-% We split W1 into the matrix that multiply s and the one that multiply a:
-
+% We split W1 to isolate the dynamics of [k(t+1) ; m(t+1)] that depends
+% on its past values (W11) and (W12) that depends on exogenous variables.
+%                 |   W11    W12  |   | k(t)  |
+%                 |  (2x2)  (2x3) |   | m(t)  |
+%    W * ?(t) =   |               | * | m(t+1)|
+%                 |       W2      |   | A(t)  |
+%                 |     (3,5)     |   | g(t)  |
 W11 = W1(:,1:2);
 W12 = W1(:,3:5);
 
-% Then we have the new system for s_t+1
-
+% We can now compute ?_s :
 PIs = W11 - W12*inv(Paa)*Pas;
+
+% -------------------------------------------
+% PIe computation
 
 % We now want to express the forward variables as a linear combination of
 % shocks.
 
+% We save the eigenvalue corresponding to each forward variable.
 mu_m = EIG(3);
 mu_mu = EIG(4);
 mu_l = EIG(5);
 
-% CL
-C = P1*R*RHO+P1*Q;
-C = C(3:5,:);
+% Here we compute a critical matrix to solve the model.
+% CL expresses the forward variables in term of shocks.
+% It is a direct application of the transversality condition to the model
+% in order to keep it converging.
 
+% To simplify our resolution we can express R*E(t+1) + Q*E(t) = C*E(t).
+% This is possible because we suppose AR() process on exogenous variables
+C = P1*R*RHO+P1*Q;
+C = C(3:5,:); % We just want to keep the dynamic of our forward variables (i.e. last 3 equations)
+
+
+% The computation of CL is given by :
 CL = [ -C(1,1)*1/(mu_m - rho_a)  -C(1,2)*1/(mu_m - rho_g);
        -C(2,1)*1/(mu_mu - rho_a) -C(2,2)*1/(mu_mu - rho_g);
        -C(3,1)*1/(mu_l - rho_a)  -C(3,2)*1/(mu_l - rho_g)];
 
-% Computation of PIa
-PIa = W12*inv(Paa)*CL+R(1:2,:)*RHO+Q(1:2,:);
+% We can now substitute CL and find our ?_e matrix
+PIe = (W12 * inv(Paa)*CL) + ( R(1:2,:) * RHO ) + Q(1:2,:);
 
-M = [PIs PIa ; zeros(2) RHO];
+% We can fully identify our state variables dynamic
+M = [PIs PIe ; zeros(2) RHO];
 
+
+% -------------------------------------------
+% Control variables dynamics
 
 %% PId matrix:
 
@@ -349,33 +384,44 @@ G3 = X(:,3:5)*inv(Paa)*CL+Y;
 
 PID(1:7,:) = [G1 G2 G3];
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% IRF
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%      
-nrep = 12;
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%             Impulse Response Function         %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 
-%Monetary shock
-shock=[0;0;0;1];
+% -------------------------------------------
+% Initialization
+
+nrep = 12; % Periods
+
+% 1% shock
+%       k   m   A   g
+shock=[ 0 ; 0 ; 0 ; 1 ];
+
+% --------------------------------------------
+% Compute state and control variables
 
 for i = 1:nrep+1
-    Rd(:,i) = (PID*M^(i-1))*shock;
-    Rstate(:,i) = (M^(i-1))*shock;
+    Rd(:,i) = (PID*M^(i-1))*shock; % Control variables response to shock.
+    Rstate(:,i) = (M^(i-1))*shock; % State variables response to shock.
 end
 
+% --------------------------------------------
+% Extract series from previous matrices
 
-k  = Rstate(1,1:nrep)';
-C  = Rd(1,1:nrep)';
-H  = Rd(2,1:nrep)';
-w  = Rd(3,1:nrep)';
-z  = Rd(4,2:(nrep+1))';
-Y  = Rd(5,1:nrep)';
-pi = Rd(6,1:nrep)';
-f  = Rd(7,1:nrep)';
-mu = Rd(8,1:nrep)';
-I  = (Y - CY*C)/CY;
+series = {'C' 'H' 'w' 'z' 'Y' 'pi' 'f' 'mu'};
+
+for i = 1:length(series)
+    irf.( series{i} ) = Rd( i , 1:nrep )';
+end
+
+irf.z  = Rd(4,2:(nrep+1))';
+irf.I  = (irf.Y - CY*irf.C)/CY;
+
+% --------------------------------------------
+% Plot figures
 
 figure
-plot(1:nrep,[w,C,z],'-o');
+plot(1:nrep,[irf.w,irf.C,irf.z],'-o');
 legend('w','C','r','Location','southoutside');
 xlabel('Quarters');
 ylabel('relative deviation (%)');
@@ -384,26 +430,41 @@ hline = refline([0 0]);
 set(hline,'LineStyle','--','color','black');
 
 figure
-plot(1:nrep,[pi,mu],'-o');
+plot(1:nrep,[irf.pi,irf.mu],'-o');
 legend('pi','mu','Location','southoutside');
 xlabel('Quarters');
 ylabel('relative deviation (%)');
 set(gcf, 'Color', [1,1,1]);
 
 figure
-plot(1:nrep,[H,Y,I],'-o');
+plot(1:nrep,[irf.H,irf.Y,irf.I],'-o');
 legend('H','Y','I','Location','southoutside');
 xlabel('Quarters');
 ylabel('relative deviation (%)');
 set(gcf, 'Color', [1,1,1]);
+hline = refline([0 0]);
+set(hline,'LineStyle','--','color','black');
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Stochastic Simulation
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+figure
+plot(1:nrep,[irf.f,irf.z],'-o');
+legend('inflation','interest rates','Location','southoutside');
+xlabel('Quarters');
+ylabel('relative deviation (%)');
+set(gcf, 'Color', [1,1,1]);
+hline = refline([0 0]);
+set(hline,'LineStyle','--','color','black');
 
-nsimul = 100;
 
-nlong=150;
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%              Stochastic Simulation            %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+nsimul = 100; % Number of simulations
+
+nlong=100; % Number of periods in each simulations
+
+% --------------------------------------------
+% Technology and money growth process
 
 % Drawing innovations
 aleaa = normrnd(0,epsilon_a,nlong,nsimul);
@@ -418,7 +479,9 @@ for t=2:nlong
     epsg(t,:) = rho_g*epsg(t-1,:) + aleag(t);
 end
 
-% We can now simulate the model
+% --------------------------------------------
+% Simulation of the model
+
 h = waitbar(0,'Simulations are running, please wait...');
 for j=1:nsimul
     waitbar(j / nsimul)
@@ -515,4 +578,11 @@ subplot(224),plot(epsg(:,1));
 title('Money growth rate')
 xlabel('Quarters')
 ylabel('% Dev.')
+set(gcf, 'Color', [1,1,1]);
+
+figure
+plot(1:nlong,[FC(:,1), RC(:,1), epsg(:,1)]);
+legend('inflation','interest rate','money growth rate','Location','southoutside');
+xlabel('Quarters');
+ylabel('relative deviation (%)');
 set(gcf, 'Color', [1,1,1]);
