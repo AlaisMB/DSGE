@@ -18,7 +18,7 @@ close all
 %%                     Country Choice                        %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-cntrymap = containers.Map([1,2],{'France','USA'}); % Map the selected number with country name (To display country name later)
+cntrymap = containers.Map([1,2],{'French','US'}); % Map the selected number with country name (To display country name later)
 prompt= 'Type the number of the country you want to simulate and press Enter: \n 1:France[default] \n 2:USA \n'; % Ask the user to choose a country
 
 % Stock the selected country and check that the user has entered a legit value :
@@ -30,6 +30,8 @@ else
     cntryid = 1;
 end
 country = cntrymap(cntryid); % Stock the country name
+plottitle = [country ' calibration'];
+
 fprintf('The model will be simulated for %s\n ',country);
 
 
@@ -274,11 +276,11 @@ end
 
 % We are looking for a solution of the form S(t+1) = M*S(t) <=>
 %
-% | k(t+1) |   |    ?_s        ?_e      |   | k(t) |
-% | m(t+1) |   |   (2x2)      (2x2)     |   | m(t) |
-% |        | = |                        | * |      |
-% | A(t+1) |   |  0     0   ?(A)    0   |   | A(t) |
-% | g(t+1) |   |  0     0   0     ?(g)  |   | g(t) |
+% | k(t+1) |   |    PI_s        PI_e      |   | k(t) |
+% | m(t+1) |   |   (2x2)      (2x2)       |   | m(t) |
+% |        | = |                          | * |      |
+% | A(t+1) |   |  0     0   rho(A)    0   |   | A(t) |
+% | g(t+1) |   |  0     0   0     rho(g)  |   | g(t) |
 
 P1 = inv(P);
 
@@ -315,13 +317,13 @@ W2 = W(3:5,:);
 % on its past values (W11) and (W12) that depends on exogenous variables.
 %                 |   W11    W12  |   | k(t)  |
 %                 |  (2x2)  (2x3) |   | m(t)  |
-%    W * ?(t) =   |               | * | m(t+1)|
+%    W * s(t) =   |               | * | m(t+1)|
 %                 |       W2      |   | A(t)  |
 %                 |     (3,5)     |   | g(t)  |
 W11 = W1(:,1:2);
 W12 = W1(:,3:5);
 
-% We can now compute ?_s :
+% We can now compute PI_s :
 PIs = W11 - W12*inv(Paa)*Pas;
 
 % -------------------------------------------
@@ -351,7 +353,7 @@ CL = [ -C(1,1)*1/(mu_m - rho_a)  -C(1,2)*1/(mu_m - rho_g);
        -C(2,1)*1/(mu_mu - rho_a) -C(2,2)*1/(mu_mu - rho_g);
        -C(3,1)*1/(mu_l - rho_a)  -C(3,2)*1/(mu_l - rho_g)];
 
-% We can now substitute CL and find our ?_e matrix
+% We can now substitute CL and find our PI_e matrix
 PIe = (W12 * inv(Paa)*CL) + ( R(1:2,:) * RHO ) + Q(1:2,:);
 
 % We can fully identify our state variables dynamic
@@ -391,7 +393,7 @@ PID(1:7,:) = [G1 G2 G3];
 % -------------------------------------------
 % Initialization
 
-nrep = 12; % Periods
+nrep = 11; % Periods
 
 % 1% shock
 %       k   m   A   g
@@ -417,7 +419,7 @@ irf.k  = Rstate(1,1:nrep)';
 irf.m  = Rstate(2,1:nrep)';
 irf.g  = Rstate(4,1:nrep)';
 irf.z  = Rd(4,2:(nrep+1))';
-irf.I  = (irf.Y-CY*irf.C)/CY ;
+irf.I  = irf.Y-irf.C ;
 
 % --------------------------------------------
 % Plot figures
@@ -428,15 +430,23 @@ legend('w','C','r','Location','southoutside');
 xlabel('Quarters');
 ylabel('relative deviation (%)');
 set(gcf, 'Color', [1,1,1]);
+legend('Orientation','horizontal');
 hline = refline([0 0]);
 set(hline,'LineStyle','--','color','black');
+title(plottitle);
+pbaspect([2 1 1]);
+saveas(gcf,[country '_irf_wcz.eps'], 'epsc2');
 
 figure
 plot(1:nrep,[irf.pi,irf.mu],'-o');
-legend('pi','mu','Location','southoutside');
+legend('Pi','mu','Location','southoutside');
 xlabel('Quarters');
 ylabel('relative deviation (%)');
 set(gcf, 'Color', [1,1,1]);
+legend('Orientation','horizontal');
+title(plottitle);
+pbaspect([2 1 1]);
+saveas(gcf,[country '_irf_pimu.eps'], 'epsc2');
 
 figure
 plot(1:nrep,[irf.H,irf.Y,irf.I],'-o');
@@ -444,26 +454,20 @@ legend('H','Y','I','Location','southoutside');
 xlabel('Quarters');
 ylabel('relative deviation (%)');
 set(gcf, 'Color', [1,1,1]);
+legend('Orientation','horizontal');
 hline = refline([0 0]);
 set(hline,'LineStyle','--','color','black');
-
-figure
-plot(1:nrep,[irf.f,irf.z],'-o');
-legend('inflation','interest rates','Location','southoutside');
-xlabel('Quarters');
-ylabel('relative deviation (%)');
-set(gcf, 'Color', [1,1,1]);
-hline = refline([0 0]);
-set(hline,'LineStyle','--','color','black');
-
+title(plottitle);
+pbaspect([2 1 1]);
+saveas(gcf,[country '_irf_hyi.eps'], 'epsc2');
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%              Stochastic Simulation            %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-nsimul = 100; % Number of simulations
+nsimul = 500; % Number of simulations
 
-nlong=100; % Number of periods in each simulations
+nlong=125; % Number of periods in each simulations
 
 % --------------------------------------------
 % Technology and money growth process
@@ -477,8 +481,8 @@ epsa(1,:) = aleaa(1,:);
 epsg(1,:) = aleag(1,:);
 
 for t=2:nlong
-    epsa(t,:) = rho_a*epsa(t-1,:) + aleaa(t);
-    epsg(t,:) = rho_g*epsg(t-1,:) + aleag(t);
+    epsa(t,:) = rho_a*epsa(t-1,:) + aleaa(t,:);
+    epsg(t,:) = rho_g*epsg(t-1,:) + aleag(t,:);
 end
 
 % --------------------------------------------
@@ -492,8 +496,10 @@ for j=1:nsimul
     for i=2:nlong;
         S(:,i)=M(1:2,1:2)*S(:,i-1)+M(1:2,3)*epsa(i-1,j)+M(1:2,4)*epsg(i-1,j); % We compute the dynamics of the state variables
     end;
-    
+        
     for i=1:nlong;
+        KC(i,j) = S(1,i)';
+        MC(i,j) = S(2,i)';
         CC(i,j) = PID(1,1:2)*S(:,i)+PID(1,3)*epsa(i,j)+PID(1,4)*epsg(i,j);
         HC(i,j) = PID(2,1:2)*S(:,i)+PID(2,3)*epsa(i,j)+PID(2,4)*epsg(i,j);
         WC(i,j) = PID(3,1:2)*S(:,i)+PID(3,3)*epsa(i,j)+PID(3,4)*epsg(i,j);
@@ -501,7 +507,7 @@ for j=1:nsimul
         YC(i,j) = PID(5,1:2)*S(:,i)+PID(5,3)*epsa(i,j)+PID(5,4)*epsg(i,j);
         PC(i,j) = PID(6,1:2)*S(:,i)+PID(6,3)*epsa(i,j)+PID(6,4)*epsg(i,j);
         FC(i,j) = PID(7,1:2)*S(:,i)+PID(7,3)*epsa(i,j)+PID(7,4)*epsg(i,j);
-        IC(i,j) = (YC(i,j)-CY*CC(i,j))/CY;
+        IC(i,j) = YC(i,j)-CC(i,j);
     end
 end
 close(h)
@@ -509,6 +515,7 @@ close(h)
 
 %%%%%% Moments computation %%%%%%%
 % HP filter
+
 [~,CCe] = hpfilter(CC,1600);
 [~,HCe] = hpfilter(HC,1600);
 [~,WCe] = hpfilter(WC,1600);
@@ -517,6 +524,35 @@ close(h)
 [~,PCe] = hpfilter(PC,1600);
 [~,FCe] = hpfilter(FC,1600);
 [~,ICe] = hpfilter(IC,1600);
+[~,MCe] = hpfilter(MC,1600);
+
+% Autocorrelation
+for i = 1:nsimul
+    ac = autocorr(CCe(:,i));
+    CCac(i) = ac(2);
+    ac = autocorr(HCe(:,i));
+    HCac(i) = ac(2);
+    ac = autocorr(WCe(:,i));
+    WCac(i) = ac(2);
+    ac = autocorr(RCe(:,i));
+    RCac(i) = ac(2);
+    ac = autocorr(YCe(:,i));
+    YCac(i) = ac(2);
+    ac = autocorr(PCe(:,i));
+    PCac(i) = ac(2);
+    ac = autocorr(FCe(:,i));
+    FCac(i) = ac(2);
+    ac = autocorr(MCe(:,i));
+    MCac(i) = ac(2);
+end
+CCac = mean(CCac);
+HCac = mean(HCac);
+WCac = mean(WCac);
+RCac = mean(RCac);
+YCac = mean(YCac);
+PCac = mean(PCac);
+FCac = mean(FCac);
+MCac = mean(MCac);
 
 % Standard deviation
 CCsd = mean(std(CCe));
@@ -527,64 +563,172 @@ YCsd = mean(std(YCe));
 PCsd = mean(std(PCe));
 FCsd = mean(std(FCe));
 ICsd = mean(std(ICe));
+MCsd = mean(std(MCe));
+
+% S.D. / S.D.(y)
+SDc = CCsd / YCsd;
+SDh = HCsd / YCsd;
+SDw = WCsd / YCsd;
+SDr = RCsd / YCsd;
+SDy = YCsd / YCsd;
+SDp = PCsd / YCsd;
+SDf = FCsd / YCsd;
+SDi = ICsd / YCsd;
+SDm = MCsd / YCsd;
+
+
+
+disp(' ');
+param1=[YCsd CCsd RCsd HCsd MCsd FCsd];
+param2=[SDy  SDc  SDr  SDh  SDm  SDf ];
+param3=[YCac CCac RCac HCac MCac FCac];
+disp('      y         c         i         h         m         f '); 
+disp('SD'); 
+disp(param1);
+disp('SD/SD(y) ');
+disp(param2);
+disp('Autocorr ');
+disp(param3);
+
 
 
 %% Plot 1 of the simulations
 
 figure
-subplot(221),plot(1:nlong,[CC(:,1),YC(:,1)]);
+plot(1:nlong,[CC(:,1),YC(:,1)]);
 legend('Consumption','Output','Location','southoutside');
 title('Revenu and consumption')
 xlabel('Quarters')
 ylabel('% Dev.')
 set(gcf, 'Color', [1,1,1]);
+legend('Orientation','horizontal');
+title(plottitle);
+pbaspect([1.8 1 1]);
+saveas(gcf,[country '_simul_cy.eps'], 'epsc2')
 
-subplot(222),plot(YC(:,1));
+%%%%%%%%%%%
+figure
+subplot(221),plot(YC(:,1));
 title('Output')
 xlabel('Quarters')
 ylabel('% Dev.')
 set(gcf, 'Color', [1,1,1]);
+pbaspect([1.8 1 1]);
 
-subplot(223),plot(WC(:,1));
+subplot(224),plot(RC(:,1));
+title('interest rates')
+xlabel('Quarters')
+ylabel('% Dev.')
+set(gcf, 'Color', [1,1,1]);
+pbaspect([1.8 1 1]);
+
+subplot(223),plot(FC(:,1));
+title('inflation')
+xlabel('Quarters')
+ylabel('% Dev.')
+set(gcf, 'Color', [1,1,1]);
+pbaspect([1.8 1 1]);
+
+subplot(222),plot(PC(:,1));
+title('Prices')
+xlabel('Quarters')
+ylabel('% Dev.')
+set(gcf, 'Color', [1,1,1]);
+pbaspect([1.8 1 1]);
+
+saveas(gcf,[country '_simul_yrfp.eps'], 'epsc2')
+
+
+%%%%%%%%%%
+figure
+subplot(221),plot(YC(:,1));
+title('Output')
+xlabel('Quarters')
+ylabel('% Dev.')
+set(gcf, 'Color', [1,1,1]);
+pbaspect([1.8 1 1]);
+
+
+subplot(224),plot(WC(:,1));
 title('Wages')
 xlabel('Quarters')
 ylabel('% Dev.')
 set(gcf, 'Color', [1,1,1]);
+pbaspect([1.8 1 1]);
 
-subplot(224),plot(HC(:,1));
+subplot(223),plot(HC(:,1));
 title('Hours')
 xlabel('Quarters')
 ylabel('% Dev.')
 set(gcf, 'Color', [1,1,1]);
+pbaspect([1.8 1 1]);
 
+subplot(222),plot(CC(:,1));
+title('Consumption')
+xlabel('Quarters')
+ylabel('% Dev.')
+set(gcf, 'Color', [1,1,1]);
+pbaspect([1.8 1 1]);
+
+saveas(gcf,[country '_simul_ywhc.eps'], 'epsc2')
+
+
+%%%%%%%%%%%
 figure
 subplot(221),plot(aleaa(:,1));
 title('White noise, Technology')
 xlabel('Quarters')
 ylabel('% Dev.')
 set(gcf, 'Color', [1,1,1]);
+pbaspect([1.8 1 1]);
+
 
 subplot(222),plot(aleag(:,1));
 title('White noise, Money growth')
 xlabel('Quarters')
 ylabel('% Dev.')
 set(gcf, 'Color', [1,1,1]);
+pbaspect([1.8 1 1]);
 
 subplot(223),plot(epsa(:,1));
 title('Total factor productivity')
 xlabel('Quarters')
 ylabel('% Dev.')
 set(gcf, 'Color', [1,1,1]);
+pbaspect([1.8 1 1]);
 
 subplot(224),plot(epsg(:,1));
 title('Money growth rate')
 xlabel('Quarters')
 ylabel('% Dev.')
 set(gcf, 'Color', [1,1,1]);
+pbaspect([1.8 1 1]);
+
+saveas(gcf,[country '_simul_ag.eps'], 'epsc2')
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%            Sensitivity to parameters          %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+sigmav = linspace(0.05,2,100);
+phiv = linspace(0.001,3.9,100);
+
+h = waitbar(0,'Sensitivity simulation is running, please wait...');
+for x = 1:length(sigmav)
+    waitbar(x / length(sigmav))
+    for y = 1:length(phiv)
+        F( x , y ) = sensitiv(sigmav(x), phiv(y));
+    end
+end
+close(h);
 
 figure
-plot(1:nlong,[FC(:,1), RC(:,1), epsg(:,1)]);
-legend('inflation','interest rate','money growth rate','Location','southoutside');
-xlabel('Quarters');
-ylabel('relative deviation (%)');
-set(gcf, 'Color', [1,1,1]);
+surf(F)
+view([30 50])
+set(gca,'Xtick',[0 50 100],'XTickLabel',[phiv(1) 1.9 phiv(100)] )
+set(gca,'Ytick',[0 50 100],'YTickLabel',[sigmav(1) 1 sigmav(100)] )
+ylabel('\sigma','FontSize',20)
+xlabel('\phi','FontSize',20)
+zlabel('Inflation jump')
+set(gcf, 'Color', [1,1,1])
+saveas(gcf,[country '_sensitivity.eps'], 'epsc2')
