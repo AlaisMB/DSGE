@@ -181,7 +181,7 @@ M2(7,1) = -z*K;
 
 %%%%%%%%%%%% DYNAMICS EQUATIONS %%%%%%%%%%%%
 
-% Equation 26 -> OK
+% Equation 26 
 M4I(1,5) = 1;
 M4L(1,5) = -1;
 
@@ -216,21 +216,21 @@ M4L(4,3) = -1;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%                      Reduced Form                 	     %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-M40 = M4I - M5I*inv(M1)*M2;
-M41 = M4L - M5L*inv(M1)*M2;
+M40 = M4I - M5I*(M1\M2);
+M41 = M4L - M5L*(M1\M2);
 
 
-M50 = M6I + M5I*inv(M1)*M3;
-M51 = M6L + M5L*inv(M1)*M3;
+M50 = M6I + M5I*(M1\M3);
+M51 = M6L + M5L*(M1\M3);
 
 % Reduces form model:
 % S(t+1) = ( W * S(t) ) + ( R * E(t+1) ) + ( Q * E(t) )
 % with S the vector of state variables and E the matrix of exogenous
 % variables.
 
-W = -inv(M40)*M41;
-R = inv(M40)*M50;
-Q = inv(M40)*M51;
+W = -M40\M41;
+R = M40\M50;
+Q = M40\M51;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%                      	Eigenvalues            			  %
@@ -324,7 +324,7 @@ W11 = W1(:,1:2);
 W12 = W1(:,3:5);
 
 % We can now compute PI_s :
-PIs = W11 - W12*inv(Paa)*Pas;
+PIs = W11 - W12*(Paa\Pas);
 
 % -------------------------------------------
 % PIe computation
@@ -354,7 +354,7 @@ CL = [ -C(1,1)*1/(mu_m - rho_a)  -C(1,2)*1/(mu_m - rho_g);
        -C(3,1)*1/(mu_l - rho_a)  -C(3,2)*1/(mu_l - rho_g)];
 
 % We can now substitute CL and find our PI_e matrix
-PIe = (W12 * inv(Paa)*CL) + ( R(1:2,:) * RHO ) + Q(1:2,:);
+PIe = (W12 * (Paa\CL)) + ( R(1:2,:) * RHO ) + Q(1:2,:);
 
 % We can fully identify our state variables dynamic
 M = [PIs PIe ; zeros(2) RHO];
@@ -365,8 +365,8 @@ M = [PIs PIe ; zeros(2) RHO];
 
 %% PId matrix:
 
-V = -inv(Paa)*Pas;
-U = inv(Paa)*CL;
+V = -Paa\Pas;
+U = Paa\CL;
 
 mu = [V(2,1:2) U(2,1:2)];
 lambda = [V(3,1:2) U(3,1:2)];
@@ -376,13 +376,13 @@ PID = zeros(9,4);
 PID(8,:) = mu;
 PID(9,:) = lambda;
 
-XX = inv(M1)*M2;
-YY = inv(M1)*M3;
-ZZ = XX(:,3:5)*inv(Paa)*Pas;
+XX = M1\M2;
+YY = M1\M3;
+ZZ = XX(:,3:5)*(Paa\Pas);
 
 G1 = XX(:,1)-ZZ(:,1);
 G2 = XX(:,2)-ZZ(:,2);
-G3 = XX(:,3:5)*inv(Paa)*CL+YY;
+G3 = XX(:,3:5)*(Paa\CL)+YY;
 
 PID(1:7,:) = [G1 G2 G3];
 
