@@ -461,6 +461,8 @@ title(plottitle);
 pbaspect([2 1 1]);
 saveas(gcf,[country '_irf_hyi.eps'], 'epsc2');
 
+close all;
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%              Stochastic Simulation            %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -706,9 +708,47 @@ pbaspect([1.8 1 1]);
 
 saveas(gcf,[country '_simul_ag.eps'], 'epsc2')
 
+%%%%%%%%%%%
+figure
+plot(1:nlong,[aleaa(:,1),YCe(:,1)]);
+legend('Technological shocks','Output (cycle)','Location','southoutside');
+xlabel('Quarters')
+ylabel('% Dev.')
+set(gcf, 'Color', [1,1,1]);
+legend('Orientation','horizontal');
+title(plottitle);
+pbaspect([2.5 1 1]);
+
+saveas(gcf,[country '_shocks_gdpA.eps'], 'epsc2')
+
+figure
+plot(1:nlong,[aleag(:,1),YCe(:,1)]);
+legend('Money growth shocks','Output (cycle)','Location','southoutside');
+xlabel('Quarters')
+ylabel('% Dev.')
+set(gcf, 'Color', [1,1,1]);
+legend('Orientation','horizontal');
+title(plottitle);
+pbaspect([2.5 1 1]);
+
+saveas(gcf,[country '_shocks_gdpg.eps'], 'epsc2')
+
+figure
+plot(1:nlong,[aleaa(:,1),aleag(:,1),YCe(:,1)]);
+legend('Technological shocks','Money growth shocks','Output (cycle)','Location','southoutside');
+xlabel('Quarters')
+ylabel('% Dev.')
+set(gcf, 'Color', [1,1,1]);
+legend('Orientation','horizontal');
+title(plottitle);
+pbaspect([2.5 1 1]);
+
+saveas(gcf,[country '_shocks_gdpAg.eps'], 'epsc2')
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%            Sensitivity to parameters          %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% You need the file sensitiv.m in the same folder in order to run this test !
+
 
 sigmav = linspace(0.05,2,100);
 phiv = linspace(0.001,3.9,100);
