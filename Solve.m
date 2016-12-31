@@ -251,7 +251,6 @@ disp('Backward variables ')
 disp(back)
 disp('Forward variables  ')
 disp(numel(EIG)-(back + UR))
-pause
 
 disp('Eigenvalues:')
 disp(EIG);
@@ -461,6 +460,8 @@ title(plottitle);
 pbaspect([2 1 1]);
 saveas(gcf,[country '_irf_hyi.eps'], 'epsc2');
 
+fprintf('Press Enter to compute simulations');
+pause
 close all;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -749,26 +750,30 @@ saveas(gcf,[country '_shocks_gdpAg.eps'], 'epsc2')
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % You need the file sensitiv.m in the same folder in order to run this test !
 
+if exist('sensitiv.m', 'file')
+    sigmav = linspace(0.05,2,100);
+    phiv = linspace(0.001,3.9,100);
 
-sigmav = linspace(0.05,2,100);
-phiv = linspace(0.001,3.9,100);
-
-h = waitbar(0,'Sensitivity simulation is running, please wait...');
-for x = 1:length(sigmav)
-    waitbar(x / length(sigmav))
-    for y = 1:length(phiv)
-        F( x , y ) = sensitiv(sigmav(x), phiv(y));
+    h = waitbar(0,'Sensitivity simulation is running, please wait...');
+    for x = 1:length(sigmav)
+        waitbar(x / length(sigmav))
+        for y = 1:length(phiv)
+            F( x , y ) = sensitiv(sigmav(x), phiv(y));
+        end
     end
-end
-close(h);
+    close(h);
 
-figure
-surf(F)
-view([30 50])
-set(gca,'Xtick',[0 50 100],'XTickLabel',[phiv(1) 1.9 phiv(100)] )
-set(gca,'Ytick',[0 50 100],'YTickLabel',[sigmav(1) 1 sigmav(100)] )
-ylabel('\sigma','FontSize',20)
-xlabel('\phi','FontSize',20)
-zlabel('Inflation jump')
-set(gcf, 'Color', [1,1,1])
-saveas(gcf,[country '_sensitivity.eps'], 'epsc2')
+    figure
+    surf(F)
+    view([30 50])
+    set(gca,'Xtick',[0 50 100],'XTickLabel',[phiv(1) 1.9 phiv(100)] )
+    set(gca,'Ytick',[0 50 100],'YTickLabel',[sigmav(1) 1 sigmav(100)] )
+    ylabel('\sigma','FontSize',20)
+    xlabel('\phi','FontSize',20)
+    zlabel('Inflation jump')
+    set(gcf, 'Color', [1,1,1])
+    saveas(gcf,[country '_sensitivity.eps'], 'epsc2')
+else
+    warningMessage = sprintf('Warning: You need the file sensitiv.m to be in the same folder in order to run the sensitivity test');
+    uiwait(msgbox(warningMessage));
+end
